@@ -1,5 +1,9 @@
 package com.example.okta.nytimes.ui.main;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
 import com.example.okta.nytimes.model.search.ResponseSearchArticle;
 import com.example.okta.nytimes.networking.NetworkError;
 import com.example.okta.nytimes.networking.Service;
@@ -16,6 +20,21 @@ public class MainPresenter {
         this.service = service;
         this.view = view;
         this.subscriptions = new CompositeSubscription();
+    }
+
+
+    public boolean isConnected(Context context) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo wifiInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        NetworkInfo mobileInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+
+        if ((wifiInfo != null && wifiInfo.isConnected()) || (mobileInfo != null && mobileInfo.isConnected())) {
+            view.ifconnected();
+            return true;
+        } else {
+            view.ifnotconnected();
+            return false;
+        }
     }
 
     public void getMostViewedArticle(String location, String page, String keyword, String apikey) {

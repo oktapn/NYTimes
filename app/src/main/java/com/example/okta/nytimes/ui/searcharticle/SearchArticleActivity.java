@@ -23,6 +23,7 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 
 public class SearchArticleActivity extends BaseApp implements SearchArticleView {
 
@@ -46,6 +47,11 @@ public class SearchArticleActivity extends BaseApp implements SearchArticleView 
         presenter = new SearchArticlePresenter(service, this);
         pd = new ProgressDialog(this, R.style.MyTheme);
         presenter.setSearchView(SWToolBar);
+    }
+
+    @OnClick(R.id.BackBtn)
+    void cloes(){
+        finish();
     }
 
     @Override

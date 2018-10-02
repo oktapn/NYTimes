@@ -1,5 +1,6 @@
 package com.example.okta.nytimes.ui.main;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Handler;
@@ -12,11 +13,19 @@ import com.example.okta.nytimes.BaseApp;
 import com.example.okta.nytimes.BuildConfig;
 import com.example.okta.nytimes.R;
 import com.example.okta.nytimes.adapter.RVListArticle;
+import com.example.okta.nytimes.adapter.RVListArticleDatabase;
+import com.example.okta.nytimes.database.Article;
+import com.example.okta.nytimes.database.RealmHelper;
 import com.example.okta.nytimes.model.search.ResponseSearchArticle;
 import com.example.okta.nytimes.networking.Service;
 import com.example.okta.nytimes.ui.searcharticle.SearchArticleActivity;
 import com.example.okta.nytimes.widget.EndlessRecyclerOnScrollListener;
 
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 
 import javax.inject.Inject;
 
@@ -33,7 +42,10 @@ public class MainActivity extends BaseApp implements MainView {
     MainPresenter presenter;
     ProgressDialog pd;
     RVListArticle mAdapater;
+    RVListArticleDatabase mAdapaterDatabase;
     LinearLayoutManager mLayoutManager;
+    private RealmHelper helper;
+    private ArrayList<Article> articles;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -41,9 +53,11 @@ public class MainActivity extends BaseApp implements MainView {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         getDeps().inject(this);
+        helper = new RealmHelper(this);
+        articles = new ArrayList<>();
         presenter = new MainPresenter(service, this);
         pd = new ProgressDialog(this, R.style.MyTheme);
-        presenter.getMostViewedArticle("indonesia", "1", "", BuildConfig.KEYAPI);
+        presenter.isConnected(this);
     }
 
     @OnClick(R.id.SearchIcon)
@@ -71,6 +85,13 @@ public class MainActivity extends BaseApp implements MainView {
 
     @Override
     public void response(ResponseSearchArticle responseSearchArticle) {
+        for (int i =0 ; i<responseSearchArticle.getResponse().getDocs().size();i++){
+            helper.addArticle(
+                    responseSearchArticle.getResponse().getDocs().get(i).getMultimedia().size() != 0 ? responseSearchArticle.getResponse().getDocs().get(i).getMultimedia().get(0).getUrl() : "-",
+                    responseSearchArticle.getResponse().getDocs().get(i).getSnippet(),
+                    responseSearchArticle.getResponse().getDocs().get(i).getPubDate() == null ? " " : getDateMonthParsefromString(responseSearchArticle.getResponse().getDocs().get(i).getPubDate()),
+                    responseSearchArticle.getResponse().getDocs().get(i).getHeadline().getMain());
+        }
         mAdapater = new RVListArticle();
         mAdapater.setContentItems(responseSearchArticle.getResponse().getDocs());
         mAdapater.notifyDataSetChanged();
@@ -116,6 +137,42 @@ public class MainActivity extends BaseApp implements MainView {
             }
         }
         mAdapater.notifyDataSetChanged();
+    }
+
+    private String getDateMonthParsefromString(String date) {
+        @SuppressLint("SimpleDateFormat") SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ssZ");
+        Date myDate = null;
+        try {
+            myDate = dateFormat.parse(date);
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        SimpleDateFormat mdformat = new SimpleDateFormat("EEEE , dd-MM-yyyy", new java.util.Locale("id"));
+        return mdformat.format(myDate);
+    }
+
+    @Override
+    public void ifconnected() {
+        presenter.getMostViewedArticle("indonesia", "1", "", BuildConfig.KEYAPI);
+    }
+
+    @Override
+    public void ifnotconnected() {
+        articles = helper.findAllArticle();
+        if (articles != null) {
+            mAdapaterDatabase = new RVListArticleDatabase();
+            mAdapaterDatabase.setContentItems(articles);
+            mAdapaterDatabase.notifyDataSetChanged();
+            mLayoutManager = new LinearLayoutManager(this);
+            mRecyclerView.setLayoutManager(mLayoutManager);
+            mRecyclerView.setAdapter(mAdapaterDatabase);
+            mLayoutManager.setSmoothScrollbarEnabled(true);
+            mRecyclerView.setHasFixedSize(true);
+        } else {
+            Toast.makeText(getApplicationContext(), "Data Belum ada Tersimpan", Toast.LENGTH_LONG).show();
+        }
+
     }
 
     @Override

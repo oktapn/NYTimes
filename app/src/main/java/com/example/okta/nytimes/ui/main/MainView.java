@@ -12,4 +12,8 @@ public interface MainView {
     void response(ResponseSearchArticle responseSearchArticle);
 
     void responsenext(ResponseSearchArticle responseSearchArticle);
+
+    void ifconnected();
+
+    void ifnotconnected();
 }
